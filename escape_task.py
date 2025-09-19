@@ -51,16 +51,16 @@ class EscapeBehavior(Task):
         # load the sound
         softcode_functions.function2()
         # get the current camera frame
-        self.last_camera_frame = manager.cam.frame
+        self.last_camera_frame = manager.cam.frame_number
 
         # while loop to go through states
         while True:
             time.sleep(0.001)
             # if the frame of the camera has not changed, skip the rest of the loop
-            if manager.cam.frame == self.last_camera_frame:
+            if manager.cam.frame_number == self.last_camera_frame:
                 continue
             # if the frame has changed, update the last camera frame
-            self.last_camera_frame = manager.cam.frame
+            self.last_camera_frame = manager.cam.frame_number
 
             match self.current_state[2]:
                 case "grace_period":
@@ -121,7 +121,8 @@ class EscapeBehavior(Task):
 
 
     def close(self):
-        pass
+        # close the file
+        self.raw_file.close()
 
 
     def change_state_to(self, new_state: str):
@@ -138,7 +139,7 @@ class EscapeBehavior(Task):
 
     def is_animal_in_trigger_zone(self) -> bool:
         # get the animal position
-        animal_position = [manager.cam.get_x(), manager.cam.get_y()]
+        animal_position = [manager.cam.mean_x_value, manager.cam.mean_y_value]
         if animal_position is None:
             return False
         # check if the animal is in the trigger zone
