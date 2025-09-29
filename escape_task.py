@@ -1,10 +1,10 @@
 from village.classes.task import Task
 import random
 from sound_functions import crescendo_looming_sound
-from village.manager import manager
 import time
 import softcode_functions
-import numpy as np
+from pathlib import Path
+from bpod_mock import BpodMock
 
 
 class EscapeBehavior(Task):
@@ -23,13 +23,14 @@ class EscapeBehavior(Task):
 
         # create a list to hold the states
         self.states_visited = []
-        # states are tupples of (START,END,MSG)
+        # states are lists of [START,END,MSG]
+
 
     def start(self):
-        # open the raw file
-        with self.raw_session_path.open("a") as self.raw_file:
-            self.raw_file.write("TRIAL;START;END;MSG;VALUE\n")
-        
+        # Open the raw file once and keep it open
+        self.output_file = Path(self.rt_session_path)
+        self.raw_file = self.output_file.open("a")
+        self.raw_file.write("TRIAL;START;END;MSG;VALUE\n")
         # create a crescendo sound
         self.crescendo_sound = crescendo_looming_sound(
             amp_start=self.settings.starting_amplitude,
@@ -39,32 +40,45 @@ class EscapeBehavior(Task):
             hold_duration=self.settings.hold_duration,
             n_repeats=self.settings.n_repeats,
         )
+        # create a mock bpod object to log events
+        self.bpod_mock = BpodMock()
 
 
     def create_trial(self):
+        self.trial_start_time = time.time()
+        # record it in the mock bpod
+        self.bpod_mock.reset_trial()
+        self.bpod_mock.current_trial["Trial start timestamp"] = self.trial_start_time
         # stop any sound that might be playing
         softcode_functions.function1()
         # innitiate grace period state
-        self.current_state = (self.chrono.now() , np.nan , "grace_period")
+        self.current_state = [time.time() , "" , "grace_period"]
         # reset the timer for triggering attempts
-        self.triggering_time_reset = self.chrono.now() - np.timedelta64(int(self.settings.time_between_sound_triggering_attempts * 1000), 'ms')
+        self.triggering_time_reset = time.time() - self.settings.time_between_sound_triggering_attempts
         # load the sound
         softcode_functions.function2()
+        # define the trigger zone as the second area in the cam_box
+        # TODO: add a warning if this is not on
+        self.trigger_zone = self.cam_box.areas[int(self.settings.trigger_zone_index)]
         # get the current camera frame
-        self.last_camera_frame = manager.cam.frame_number
+        self.last_camera_frame = self.cam_box.frame_number
 
         # while loop to go through states
+        loop_counter = 0
         while True:
+            loop_counter += 1
+            if loop_counter % 1000 == 0:
+                print(f"Escape Task Loop {loop_counter}, with x y positions {self.cam_box.x_mean_value} {self.cam_box.y_mean_value} and state {self.current_state[2]}")
             time.sleep(0.001)
             # if the frame of the camera has not changed, skip the rest of the loop
-            if manager.cam.frame_number == self.last_camera_frame:
+            if self.cam_box.frame_number == self.last_camera_frame:
                 continue
             # if the frame has changed, update the last camera frame
-            self.last_camera_frame = manager.cam.frame_number
+            self.last_camera_frame = self.cam_box.frame_number
 
             match self.current_state[2]:
                 case "grace_period":
-                    if (self.chrono.now() - self.current_state[0]).total_seconds() > self.settings.grace_period:
+                    if (time.time() - self.current_state[0]) > self.settings.grace_period:
                         if self.is_animal_in_trigger_zone():
                             self.change_state_to("animal_inside_trigger_zone")
                         else:
@@ -83,7 +97,7 @@ class EscapeBehavior(Task):
                         self.change_state_to("animal_outside_trigger_zone")
                         continue
                     # check if the time between triggering attempts has passed
-                    if (self.chrono.now() - self.triggering_time_reset).total_seconds() < self.settings.time_between_sound_triggering_attempts:
+                    if (time.time() - self.triggering_time_reset) < self.settings.time_between_sound_triggering_attempts:
                         continue
                     # if the time has passed, decide whether to play the sound or not
                     # check if we play the looming sound
@@ -96,60 +110,74 @@ class EscapeBehavior(Task):
                     else:
                         self.register_event("sound_not_played")
                         # set a timer to wait before trying to trigger the sound again
-                        self.triggering_time_reset = self.chrono.now()
+                        self.triggering_time_reset = time.time()
                 
                 case "sound_triggered":
                     # wait for some time to let the animal escape and stuff
                     time.sleep(self.settings.time_to_wait_after_sound)
-                    # finish the trial TODO: Is this enough?
+                    # finish the trial
                     return
 
 
     def after_trial(self):
         # write the end time of the ending state
-        self.current_state[1] = self.chrono.now()
+        self.current_state[1] = time.time()
         # append the current state to the list of states visited
         self.states_visited.append(self.current_state)
         # write the states visited to the raw file
-        with self.raw_session_path.open("a") as self.raw_file:
-            for state in self.states_visited:
-                self.raw_file.write(f"{self.current_trial};{state[0]};{state[1]};STATE_{state[2]};\n")
+        for state in self.states_visited:
+            self.raw_file.write(f"{self.current_trial};{state[0]};{state[1]};STATE_{state[2]};\n")
+            # also register it in the mock bpod
+            self.bpod_mock.record_state(state[2], [state[0], state[1]])
+        # write the location of the trigger zone
+        # TODO: use register_value function instead
+        self.raw_file.write(f"{self.current_trial};;;trigger_zone;{self.trigger_zone}\n")
+        self.bpod_mock.current_trial["trigger_zone"] = self.trigger_zone
         # reset the list of states visited
         self.states_visited = []
         # reset the current state
-        self.current_state = (np.nan, np.nan, "none")
+        self.current_state = ['', '', 'none']
+        # write to file the trial start and end
+        self.raw_file.write(f"{self.current_trial};{self.trial_start_time};{time.time()};TRIAL;\n")
+
+        # reset the mock bpod
+        self.bpod_mock.reset_trial()
 
 
     def close(self):
         # close the file
-        self.raw_file.close()
+        if not self.raw_file.closed:
+            self.raw_file.close()
 
 
     def change_state_to(self, new_state: str):
         # update the current state ending time
-        self.current_state[1] = self.chrono.now()
+        self.current_state[1] = time.time()
         # Register the state change event
         self.register_event(f"_Transition_to_{new_state}")
         # append the current state to the list of states visited
         self.states_visited.append(self.current_state)
         # update the current state to the new state
-        self.current_state = (self.chrono.now(), np.nan, new_state)
+        self.current_state = [time.time(), '', new_state]
         return
 
 
     def is_animal_in_trigger_zone(self) -> bool:
         # get the animal position
-        animal_position = [manager.cam.mean_x_value, manager.cam.mean_y_value]
+        animal_position = [self.cam_box.x_mean_value, self.cam_box.y_mean_value]
         if animal_position is None:
             return False
         # check if the animal is in the trigger zone
-        if (self.settings.trigger_zone_x[0] <= animal_position[0] <= self.settings.trigger_zone_x[1]) and \
-           (self.settings.trigger_zone_y[0] <= animal_position[1] <= self.settings.trigger_zone_y[1]):
+        if (self.trigger_zone[0] <= animal_position[0] <= self.trigger_zone[2]) and \
+           (self.trigger_zone[1] <= animal_position[1] <= self.trigger_zone[3]):
             return True
         return False
 
 
-    def register_event(self, msg: str, value: float = np.nan):
-        self.raw_file.write(f"{self.current_trial};{self.chrono.now()};{np.nan};{msg};{value}\n")
+    def register_event(self, msg: str, value = '') -> None:
+        time_of_event = time.time()
+        self.raw_file.write(f"{self.current_trial};{time_of_event};{''};{msg};{value}\n")
+        self.bpod_mock.record_event(msg, time_of_event)
+        self.bpod_mock.record_message(msg)
         return
     

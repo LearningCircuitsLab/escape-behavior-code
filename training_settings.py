@@ -1,7 +1,7 @@
-from village.classes.training import Training
+from village.classes.training import TrainingProtocolBase
 
 
-class TrainingSettings(Training):
+class TrainingSettings(TrainingProtocolBase):
     """
     This class defines the training protocol for animal behavior experiments.
     The training protocol is run every time a task is finished and it determines:
@@ -32,7 +32,7 @@ class TrainingSettings(Training):
 
         Required parameters:
         - next_task (str): Name of the next task to run
-        - refractary_period (int): Waiting time in seconds between sessions
+        - refractory_period (int): Waiting time in seconds between sessions
         - minimum_duration (int): Minimum time in seconds for the task before door2 opens
         - maximum_duration (int): Maximum time in seconds before task stops automatically
 
@@ -43,7 +43,7 @@ class TrainingSettings(Training):
 
         # Required parameters for any training protocol
         self.settings.next_task = "Escape"  # Next task to run
-        self.settings.refractary_period = 3600 * 4  # 4 hours between sessions of the same subject
+        self.settings.refractory_period = 3600 * 4  # 4 hours between sessions of the same subject
         self.settings.minimum_duration = 1  # Minimum duration of 1 second
         self.settings.maximum_duration = 10*60*60  # Maximum duration of 10 hours
 
@@ -66,8 +66,7 @@ class TrainingSettings(Training):
         # time to wait after sound is played before starting a new trial
         self.settings.time_to_wait_after_sound = 5  # seconds
         # trigger zone coordinates TODO
-        self.settings.trigger_zone_x = [0, 100]  # x coordinates of the trigger zone
-        self.settings.trigger_zone_y = [0, 100]  # y coordinates of the trigger zone
+        self.settings.trigger_zone_index = 1  # index of the area in the cam_box to use as trigger zone
 
 
 
@@ -75,7 +74,7 @@ class TrainingSettings(Training):
         pass
 
 
-    def gui_tabs(self):
+    def define_gui_tabs(self):
         """
         Define the organization of the settings in the GUI.
 
@@ -86,7 +85,7 @@ class TrainingSettings(Training):
         You can also restrict the possible values for each setting.
         """
         self.gui_tabs = {
-            "Sound Parameters": [
+            "SoundParameters": [
                 "starting_amplitude",
                 "ending_amplitude",
                 "ramp_duration",
@@ -98,4 +97,5 @@ class TrainingSettings(Training):
 
         # Define possible values for each variable
         self.gui_tabs_restricted = {
+            "trigger_zone_index": [0, 1, 2, 3],
         }
