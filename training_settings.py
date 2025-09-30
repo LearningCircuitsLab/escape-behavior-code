@@ -51,7 +51,7 @@ class TrainingSettings(TrainingProtocolBase):
 
         # sound parameters
         self.settings.starting_amplitude = 0.0001  # ?? dB SPL
-        self.settings.ending_amplitude = 0.05  # ~75 dB SPL
+        self.settings.ending_amplitude = 0.2  # ~75 dB SPL
         self.settings.ramp_duration = 0.4
         self.settings.ramp_down_duration = 0.005
         self.settings.hold_duration = 0.595

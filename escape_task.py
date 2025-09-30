@@ -67,9 +67,9 @@ class EscapeBehavior(Task):
         loop_counter = 0
         while True:
             loop_counter += 1
-            if loop_counter % 1000 == 0:
-                print(f"Escape Task Loop {loop_counter}, with x y positions {self.cam_box.x_mean_value} {self.cam_box.y_mean_value} and state {self.current_state[2]}")
-            time.sleep(0.001)
+            # if loop_counter % 1000 == 0:
+            #     print(f"Escape Task Loop {loop_counter}, with x y positions {self.cam_box.x_mean_value} {self.cam_box.y_mean_value} and state {self.current_state[2]}")
+            time.sleep(0.005)
             # if the frame of the camera has not changed, skip the rest of the loop
             if self.cam_box.frame_number == self.last_camera_frame:
                 continue
@@ -165,7 +165,8 @@ class EscapeBehavior(Task):
     def is_animal_in_trigger_zone(self) -> bool:
         # get the animal position
         animal_position = [self.cam_box.x_mean_value, self.cam_box.y_mean_value]
-        if animal_position is None:
+        # if values are -1, return false
+        if animal_position[0] == -1:
             return False
         # check if the animal is in the trigger zone
         if (self.trigger_zone[0] <= animal_position[0] <= self.trigger_zone[2]) and \

@@ -15,14 +15,20 @@ def crescendo_looming_sound(
     # convert n_repeats to an int
     n_repeats = int(n_repeats)
     fs = settings.get("SAMPLERATE")  # Sampling frequency
-    # Generate ramp + hold for one repetition
+    # Generate ramp + rampdown + hold for one repetition
     n_ramp = int(fs * ramp_duration)
     n_hold = int(fs * hold_duration)
     n_ramp_down = int(fs * ramp_down_duration)
+    # convert amplitudes to dB
+    db_start = 20 * np.log10(amp_start)
+    db_end = 20 * np.log10(amp_end)
     # Linear amplitude ramp (in dB scale)
-    ramp_amplitudes = np.linspace(amp_start, amp_end, n_ramp)
+    db_ramp = np.linspace(db_start, db_end, n_ramp)
+    db_ramp_down = np.linspace(db_end, db_start, n_ramp_down)
+    # Convert back to amplitudes (exponential in linear scale)
+    ramp_amplitudes = 10 ** (db_ramp / 20)
+    ramp_down_amplitudes = 10 ** (db_ramp_down / 20)
     hold_amplitudes = np.ones(n_hold) * amp_start
-    ramp_down_amplitudes = np.linspace(amp_end, amp_start, n_ramp_down)
     # Create one cycle of noise
     noise_ramp = np.random.randn(n_ramp) * ramp_amplitudes
     noise_hold = np.random.randn(n_hold) * hold_amplitudes
