@@ -5,7 +5,7 @@ import time
 import softcode_functions
 from pathlib import Path
 from bpod_mock import BpodMock
-
+#from gpiozero import LED
 
 class EscapeBehavior(Task):
     def __init__(self):
@@ -27,6 +27,7 @@ class EscapeBehavior(Task):
 
 
     def start(self):
+        #self.led = LED(18)
         # Open the raw file once and keep it open
         self.output_file = Path(self.rt_session_path)
         self.raw_file = self.output_file.open("a")
@@ -45,6 +46,7 @@ class EscapeBehavior(Task):
 
 
     def create_trial(self):
+        #self.led.off()
         self.trial_start_time = time.time()
         # record it in the mock bpod
         self.bpod_mock.reset_trial()
@@ -69,7 +71,7 @@ class EscapeBehavior(Task):
             loop_counter += 1
             # if loop_counter % 1000 == 0:
             #     print(f"Escape Task Loop {loop_counter}, with x y positions {self.cam_box.x_mean_value} {self.cam_box.y_mean_value} and state {self.current_state[2]}")
-            time.sleep(0.005)
+            time.sleep(0.001)
             # if the frame of the camera has not changed, skip the rest of the loop
             if self.cam_box.frame_number == self.last_camera_frame:
                 continue
@@ -85,8 +87,11 @@ class EscapeBehavior(Task):
                             self.change_state_to("animal_outside_trigger_zone")
 
                 case "animal_outside_trigger_zone":
+                    self.cam_box.log("out")
                     # check if the animal is in the trigger zone
                     if self.is_animal_in_trigger_zone():
+                        self.cam_box.log("in")
+                        #self.led.on()
                         self.register_event("animal_entered_trigger_zone")
                         self.change_state_to("animal_inside_trigger_zone")
 
