@@ -65,8 +65,8 @@ class TrainingProtocol(TrainingProtocolBase):
         self.settings.time_between_sound_triggering_attempts = 2  # seconds
         # time to wait after sound is played before starting a new trial
         self.settings.time_to_wait_after_sound = 5  # seconds
-        # trigger zone coordinates TODO
-        self.settings.trigger_zone_index = 1  # index of the area in the cam_box to use as trigger zone
+        # trigger zone coordinates
+        self.settings.trigger_area = 2  # index of the area in the cam_box to use as trigger zone
 
 
 
@@ -97,5 +97,6 @@ class TrainingProtocol(TrainingProtocolBase):
 
         # Define possible values for each variable
         self.gui_tabs_restricted = {
-            "trigger_zone_index": [0, 1, 2, 3],
+            #"trigger_area": [1, 2, 3, 4],
+            "trigger_area" : [2],
         }

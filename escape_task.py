@@ -63,16 +63,16 @@ class EscapeBehavior(Task):
         softcode_functions.function2()
         # define the trigger zone as the second area in the cam_box
         # TODO: add a warning if this is not on
-        self.trigger_zone = self.cam_box.areas[int(self.settings.trigger_zone_index)]
+        self.trigger_zone = self.cam_box.areas[int(self.settings.trigger_area) - 1]
         # get the current camera frame
         self.last_camera_frame = self.cam_box.frame_number
 
         # while loop to go through states
-        loop_counter = 0
+        # loop_counter = 0
         while True:
-            loop_counter += 1
-            # if loop_counter % 1000 == 0:
-            #     print(f"Escape Task Loop {loop_counter}, with x y positions {self.cam_box.x_mean_value} {self.cam_box.y_mean_value} and state {self.current_state[2]}")
+            #loop_counter += 1
+            #if loop_counter % 1000 == 0:
+            #   print(f"Escape Task Loop {loop_counter}, with x y positions {self.cam_box.x_position} {self.cam_box.y_position} and state {self.current_state[2]} for area {self.trigger_zone}")
             time.sleep(0.001)
             # if the frame of the camera has not changed, skip the rest of the loop
             if self.cam_box.frame_number == self.last_camera_frame:
@@ -89,10 +89,10 @@ class EscapeBehavior(Task):
                             self.change_state_to("animal_outside_trigger_zone")
 
                 case "animal_outside_trigger_zone":
-                    self.cam_box.log("out")
+                    # self.cam_box.log("out")
                     # check if the animal is in the trigger zone
                     if self.animal_in_trigger_zone:
-                        self.cam_box.log("in")
+                        # self.cam_box.log("in")
                         #self.led.on()
                         self.register_event("animal_entered_trigger_zone")
                         self.change_state_to("animal_inside_trigger_zone")
