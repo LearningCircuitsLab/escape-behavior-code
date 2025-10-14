@@ -1,7 +1,7 @@
-from village.classes.training import TrainingProtocolBase
+from village.custom_classes.training_protocol_base import TrainingProtocolBase
 
 
-class TrainingSettings(TrainingProtocolBase):
+class TrainingProtocol(TrainingProtocolBase):
     """
     This class defines the training protocol for animal behavior experiments.
     The training protocol is run every time a task is finished and it determines:

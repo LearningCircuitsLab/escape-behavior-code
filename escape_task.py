@@ -1,4 +1,4 @@
-from village.classes.task import Task
+from village.custom_classes.task import Task
 import random
 from sound_functions import crescendo_looming_sound
 import time
@@ -24,6 +24,8 @@ class EscapeBehavior(Task):
         # create a list to hold the states
         self.states_visited = []
         # states are lists of [START,END,MSG]
+
+        self.animal_in_trigger_zone = False
 
 
     def start(self):
@@ -81,7 +83,7 @@ class EscapeBehavior(Task):
             match self.current_state[2]:
                 case "grace_period":
                     if (time.time() - self.current_state[0]) > self.settings.grace_period:
-                        if self.is_animal_in_trigger_zone():
+                        if self.animal_in_trigger_zone:
                             self.change_state_to("animal_inside_trigger_zone")
                         else:
                             self.change_state_to("animal_outside_trigger_zone")
@@ -89,7 +91,7 @@ class EscapeBehavior(Task):
                 case "animal_outside_trigger_zone":
                     self.cam_box.log("out")
                     # check if the animal is in the trigger zone
-                    if self.is_animal_in_trigger_zone():
+                    if self.animal_in_trigger_zone:
                         self.cam_box.log("in")
                         #self.led.on()
                         self.register_event("animal_entered_trigger_zone")
@@ -97,7 +99,7 @@ class EscapeBehavior(Task):
 
                 case "animal_inside_trigger_zone":
                     # check if the animal is still in the trigger zone
-                    if not self.is_animal_in_trigger_zone():
+                    if not self.animal_in_trigger_zone:
                         self.register_event("animal_exited_trigger_zone")
                         self.change_state_to("animal_outside_trigger_zone")
                         continue
@@ -116,7 +118,7 @@ class EscapeBehavior(Task):
                         self.register_event("sound_not_played")
                         # set a timer to wait before trying to trigger the sound again
                         self.triggering_time_reset = time.time()
-                
+
                 case "sound_triggered":
                     # wait for some time to let the animal escape and stuff
                     time.sleep(self.settings.time_to_wait_after_sound)
@@ -167,23 +169,9 @@ class EscapeBehavior(Task):
         return
 
 
-    def is_animal_in_trigger_zone(self) -> bool:
-        # get the animal position
-        animal_position = [self.cam_box.x_mean_value, self.cam_box.y_mean_value]
-        # if values are -1, return false
-        if animal_position[0] == -1:
-            return False
-        # check if the animal is in the trigger zone
-        if (self.trigger_zone[0] <= animal_position[0] <= self.trigger_zone[2]) and \
-           (self.trigger_zone[1] <= animal_position[1] <= self.trigger_zone[3]):
-            return True
-        return False
-
-
     def register_event(self, msg: str, value = '') -> None:
         time_of_event = time.time()
         self.raw_file.write(f"{self.current_trial};{time_of_event};{''};{msg};{value}\n")
         self.bpod_mock.record_event(msg, time_of_event)
         self.bpod_mock.record_message(msg)
         return
-    
